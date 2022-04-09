@@ -25,13 +25,23 @@ jobs:
       run: |
         cd ${{ github.workspace }}
         REVCOUNT=`git rev-list --count HEAD`
-        echo "::set-output name=REV_LIST_COUNT::${REVCOUNT}"
-        VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")
+        echo "::set-output name=REV_COUNT::${REVCOUNT}"
+        if [[ "${{ github.ref }}" =~ "refs/tags/" ]]; then
+          VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")
+        else
+          VERSION=r${REVCOUNT}
+        fi
         echo "::set-output name=VERSION_NAME::${VERSION}"
 
   build:
     name: Upload Release Asset
     runs-on: windows-2022
+    needs: get_version_name
+
+    defaults:
+      run:
+        shell: cmd
+
     strategy:
       fail-fast: false
       matrix:
@@ -44,7 +54,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.0.2
+        uses: microsoft/setup-msbuild@v1.1
         with:
           msbuild-architecture: ${{ matrix.arch }}
 
@@ -53,11 +63,11 @@ jobs:
           msbuild ChapConvert.sln /t:build /p:configuration=Release /p:Platform=${{ matrix.platform }} -maxcpucount
 
       - name: Create Archieve
+        id: archieve
         run: |
-          cd Release
-          set PKGFILE=ChapConvert_${{ steps.get_version_name.outputs.version_name }}.zip
-          7z a -mx9 %PKGFILE% ChapConvert.exe
-          echo ::set-output name=pkgfile::Release\%PKGFILE%
+          mkdir ChapConvert_Release
+          copy Release\ChapConvert.exe ChapConvert_Release
+          7z a -mx9 ChapConvert_${{ needs.get_version_name.outputs.version_name }}.zip .\ChapConvert_Release\*
 
       - name: Upload Release Asset
         id: upload-release-asset 
@@ -66,4 +76,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: ${{ steps.build.outputs.pkgfile }}
+          files: .\ChapConvert_${{ needs.get_version_name.outputs.version_name }}.zip
