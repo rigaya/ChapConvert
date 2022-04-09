@@ -120,7 +120,7 @@ int _tmain(int argc, const TCHAR **argv) {
         }
     }
 
-    if (convertFromNeroUTF8) {
+    if (convertFromNeroUTF8 && inputCP != CODE_PAGE_UNSET) {
         inputCP = CODE_PAGE_UTF8;
     }
 
