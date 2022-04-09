@@ -1,24 +1,24 @@
-
+﻿
 # ChapConvert
 
-�`���v�^�[�t�@�C����nero�`�� <-> apple�`���𑊌ݕϊ����܂��B
+チャプターファイルのnero形式 <-> apple形式を相互変換します。
 
-## �����
+## 動作環境
 Windows 8.1/10/11 (x86/x64)
 
-## ChapConvert �g�p�ɂ������Ă̒��ӎ���
-���ۏ؂ł��B���ȐӔC�Ŏg�p���Ă��������B
-ChapConvert���g�p�������Ƃɂ��A�����Ȃ鑹�Q�E�g���u���ɂ��Ă��ӔC�𕉂��܂���B
+## ChapConvert 使用にあたっての注意事項
+無保証です。自己責任で使用してください。
+ChapConvertを使用したことによる、いかなる損害・トラブルについても責任を負いません。
 
-## �g�p���@
-�ϊ��������`���v�^�[�t�@�C�����h���b�O�h���b�v���邩�A���L�̂悤�ɃR�}���h�����s���܂��B
+## 使用方法
+変換したいチャプターファイルをドラッグドロップするか、下記のようにコマンドを実行します。
 
 ```
 ChapConvert.exe [options] <chapter file1> [<chapter file2>][...]
 ```
-### �I�v�V����
+### オプション
 #### -f,--format &lt;string&gt;  
-  �o�̓`���v�^�[�t�@�C���̃t�H�[�}�b�g���w�肵�܂��B (�f�t�H���g: another)
+  出力チャプターファイルのフォーマットを指定します。 (デフォルト: another)
   ```
     another   ... convert to another format (nero->apple, apple->nero)
     nero      ... convert to nero format (ansi)
@@ -27,23 +27,23 @@ ChapConvert.exe [options] <chapter file1> [<chapter file2>][...]
   ```
 
 #### --format-in &lt;string&gt;  
-  ���̓`���v�^�[�t�@�C���̃t�H�[�}�b�g���w�肵�܂��B (�f�t�H���g: auto)
+  入力チャプターファイルのフォーマットを指定します。 (デフォルト: auto)
   ```
-    nero      ... nero�`�� (ansi)
-    nero_utf8 ... nero�`�� (utf8)
+    nero      ... nero形式 (ansi)
+    nero_utf8 ... nero形式 (utf8)
     apple     ... apple format (utf8)
     matroska  ... matroska format (utf8)
   ```
 
 #### --cp-in &lt;string&gt;  
-   ���̓`���v�^�[�t�@�C���̕����R�[�h���w�肵�܂��B (�f�t�H���g: auto)  
-   �`���v�^�[�̕����R�[�h������ȏꍇ�ɂ��̃I�v�V�����ŕύX���܂��B
+   入力チャプターファイルの文字コードを指定します。 (デフォルト: auto)  
+   チャプターの文字コードが特殊な場合にこのオプションで変更します。
   ```
     ansi, utf8, sjis, eucjp, iso2022jp, utf16le, utf16be
   ```
 
-## �`���v�^�[�̊e�`���̗�
-### nero�`��  
+## チャプターの各形式の例
+### nero形式  
 ```
 CHAPTER01=00:00:39.706
 CHAPTER01NAME=chapter-1
@@ -53,7 +53,7 @@ CHAPTER03=00:01:28.288
 CHAPTER03NAME=chapter-3
 ```
 
-### apple�`�� (utf-8)  
+### apple形式 (utf-8)  
 ```
 <?xml version="1.0" encoding="UTF-8" ?>
   <TextStream version="1.1">
@@ -68,7 +68,7 @@ CHAPTER03NAME=chapter-3
 </TextStream>
 ```
 
-### matroska�`�� (utf-8)  
+### matroska形式 (utf-8)  
 [Other Samples&gt;&gt;](https://github.com/nmaier/mkvtoolnix/blob/master/examples/example-chapters-1.xml)
 ```
 <?xml version="1.0" encoding="UTF-8"?>
@@ -103,27 +103,27 @@ CHAPTER03NAME=chapter-3
 </Chapters>
 ```
 
-## ����
-Apple�`���̃`���v�^�[�X�g���[���́u�����v������ƑΉ����܂���B
-���g�p��A���ɖ��͂Ȃ��Ǝv���܂��B(iPhone, iTunes, LAV Splitter�Ŋm�F)
+## 制限
+Apple形式のチャプターストリームの「長さ」が動画と対応しません。
+実使用上、特に問題はないと思います。(iPhone, iTunes, LAV Splitterで確認)
 
-Apple�`���ł͍Ō�ɂ���Ȃ��񂶂�
+Apple形式では最後にこんなかんじで
 ```
 <TextSample sampleTime="00:23:39.518" text="" />
 ```
-�`���v�^�[�X�g���[���̒��������܂��B
+チャプターストリームの長さを入れます。
 
-�\�ȏꍇ�A�����ɓ���̒���������̂��]�܂����ł��B
-�������A����ChapConvert�ŕϊ�����ꍇ�A����̒�����m�邷�ׂ͂���܂���B
-�����ŁA�Ō�̃`���v�^�[ + 1ms���`���v�^�[�X�g���[���̒����Ƃ��Ă��܂��B
-����Ŏ��g�p��A���ɖ��͂Ȃ��ł��傤�B
-�ǂ����Ă��C�ɂȂ�l�͂��Ƃ���ύX���Ă��������B
+可能な場合、ここに動画の長さを入れるのが望ましいです。
+しかし、このChapConvertで変換する場合、動画の長さを知るすべはありません。
+そこで、最後のチャプター + 1msをチャプターストリームの長さとしています。
+これで実使用上、特に問題はないでしょう。
+どうしても気になる人はあとから変更してください。
 
-## �X�V����
+## 更新履歴
 ### 2022.04.09
-- VS2022�Ɉڍs�B
-- ���o�͂̃`���v�^�[�t�@�C���`�����w�肷��I�v�V������ǉ��B
-- ���͕����R�[�h���w�肷��I�v�V������ǉ��B
+- VS2022に移行。
+- 入出力のチャプターファイル形式を指定するオプションを追加。
+- 入力文字コードを指定するオプションを追加。
 
 2012.05.20
-  �؂�o���A�ꕔ����
+  切り出し、一部改変
