@@ -6,60 +6,121 @@
 //   ・本ソースコードを使用したことによるいかなる損害・トラブルについてrigayaは責任を負いません。
 //   以上に了解して頂ける場合、本ソースコードの使用、複製、改変、再頒布を行って頂いて構いません。
 //  -----------------------------------------------------------------------------------------
+#include <filesystem>
+#include "rgy_chapter.h"
+#include "rgy_filesystem.h"
+#include "rgy_codepage.h"
+#include "rgy_util.h"
 
-#include "ChapterRW.h"
-
-#if defined(_WIN32) || defined(_WIN64)
-#include <shlwapi.h>
-#pragma comment (lib, "shlwapi.lib")
-#else
-#include <sys/types.h>
-#include <sys/stat.h>
-
-bool PathFileExists(const char *filepath) {
-    struct stat st;
-    return 0 == stat(filepath, &st);
+const TCHAR *typeToStr(ChapType type) {
+    switch (type) {
+    case CHAP_TYPE_ANOTHER:   return _T("another");
+    case CHAP_TYPE_NERO:      return _T("nero");
+    case CHAP_TYPE_APPLE:     return _T("apple");
+    case CHAP_TYPE_MATROSKA:  return _T("matroska");
+    case CHAP_TYPE_UNKNOWN:
+    default:                  return _T("unknown");
+    }
 }
 
-static inline const char *PathFindExtensionA(const char *path) {
-    return strrchr(basename(path), '.');
+ChapType typeFromStr(const TCHAR *str, bool& convertToNeroUTF8) {
+    if (_tcsicmp(str, _T("another"))   == 0) return CHAP_TYPE_ANOTHER;
+    if (_tcsicmp(str, _T("apple"))     == 0) return CHAP_TYPE_APPLE;
+    if (_tcsicmp(str, _T("matroska"))  == 0) return CHAP_TYPE_MATROSKA;
+    if (_tcsicmp(str, _T("nero"))      == 0) { convertToNeroUTF8 = false; return CHAP_TYPE_NERO; }
+    if (_tcsicmp(str, _T("nero_utf8")) == 0) { convertToNeroUTF8 = true;  return CHAP_TYPE_NERO; }
+    return CHAP_TYPE_UNKNOWN;
 }
-#endif
 
-
-//ファイル名(拡張子除く)の後ろに文字列を追加する
-static inline void apply_appendix(char *new_filename, size_t new_filename_size, const char *orig_filename, const char *appendix) {
-    if (new_filename != orig_filename)
-        strcpy_s(new_filename, new_filename_size, orig_filename);
-    strcpy_s(PathFindExtensionA(new_filename), new_filename_size - (PathFindExtensionA(new_filename) - new_filename), appendix);
+void print_help() {
+    _ftprintf(stdout,
+        _T("ChapConvert\n")
+        _T("\n")
+        _T("usage\n")
+        _T("ChapConvert(.exe) [options] <chapter file1> [<chapter file2>][...]\n")
+        _T("\n")
+        _T("options\n")
+        _T("-f,--format <string>   output capter format (default: another)\n")
+        _T("   another   ... convert to another format (nero->apple, apple->nero)\n")
+        _T("   nero      ... convert to nero format\n")
+        _T("   nero_utf8 ... convert to nero format in utf8\n")
+        _T("   apple     ... convert to apple format\n")
+        _T("\n")
+        _T("  --format-in <string> input chapter format (default: auto detect)\n")
+        _T("   nero      ... nero format\n")
+        _T("   nero_utf8 ... nero format in utf8\n")
+        _T("   apple     ... apple format\n")
+        _T("   matroska  ... matroska format\n")
+        _T("\n")
+        _T("  --cp-in  <string>    input codepage (default: ansi)\n")
+        _T("   ansi, utf8, sjis, eucjp, iso2022jp, utf16le, utf16be\n")
+    );
 }
-#if defined(_WIN32) || defined(_WIN64)
-static inline void apply_appendix(WCHAR *new_filename, size_t new_filename_size, const WCHAR *orig_filename, const WCHAR *appendix) {
-    if (new_filename != orig_filename)
-        wcscpy_s(new_filename, new_filename_size, orig_filename);
-    wcscpy_s(PathFindExtensionW(new_filename), new_filename_size - (PathFindExtensionW(new_filename) - new_filename), appendix);
-}
-#endif //#if defined(_WIN32) || defined(_WIN64)
 
-int main(int argc, char **argv) {
+int _tmain(int argc, const TCHAR **argv) {
     if (argc == 1) {
-        fprintf(stderr, "チャプターファイルをドラッグ&ドロップしてください。\n");
+        _ftprintf(stderr, _T("target chapter file not specified.\n"));
         return 1;
     }
-    for (int i = 1; i < argc; i++) {
-        if (!PathFileExists(argv[i])) {
-            fprintf(stderr, "チャプターファイル %s が存在しません。\n", PathFindFileName(argv[i]));
-        } else {
+    ChapType convertFrom         = CHAP_TYPE_UNKNOWN;
+    bool     convertFromNeroUTF8 = false;
+    ChapType convertTo           = CHAP_TYPE_ANOTHER;
+    bool     convertToNeroUTF8   = false;
+    uint32_t inputCP             = CODE_PAGE_UNSET;
 
+    int iarg = 1;
+    for (; iarg < argc-1; iarg++) {
+        if (   _tcscmp(argv[iarg], _T("-f")) == 0
+            || _tcscmp(argv[iarg], _T("--format")) == 0) {
+            iarg++;
+            convertTo = typeFromStr(argv[iarg], convertToNeroUTF8);
+            if (convertTo == CHAP_TYPE_UNKNOWN) {
+                _ftprintf(stderr, _T("invalid output format: %s.\n"), argv[iarg]);
+                exit(1);
+            }
+        } else if (_tcscmp(argv[iarg], _T("--format-in")) == 0) {
+            iarg++;
+            convertFrom = typeFromStr(argv[iarg], convertFromNeroUTF8);
+            if (convertFrom == CHAP_TYPE_UNKNOWN) {
+                _ftprintf(stderr, _T("invalid input format: %s.\n"), argv[iarg]);
+                exit(1);
+            }
+        } else if (_tcscmp(argv[iarg], _T("--cp-in")) == 0) {
+            iarg++;
+            inputCP = codepage_from_str(tchar_to_string(argv[iarg]).c_str());
+            if (inputCP == CODE_PAGE_UNSET) {
+                _ftprintf(stderr, _T("invalid input code page: %s.\n"), argv[iarg]);
+                exit(1);
+            }
+        }
+    }
+
+    if (convertFromNeroUTF8) {
+        inputCP = CODE_PAGE_UTF8;
+    }
+
+    for (; iarg < argc; iarg++) {
+        const auto chap_name = argv[iarg];
+        if (!rgy_file_exists(chap_name)) {
+            _ftprintf(stderr, _T("chapter file \"%s\" does not exist.\n"), chap_name);
+        } else {
             int sts = AUO_CHAP_ERR_NONE;
             ChapterRW chapParser;
-            if (AUO_CHAP_ERR_NONE == (sts = chapParser.read_file(argv[i], CODE_PAGE_UNSET, 0.0))) {
-                char new_chap_name[1024] = { 0 };
-                apply_appendix(new_chap_name, _countof(new_chap_name), argv[i], (chapParser.file_chapter_type() == CHAP_TYPE_NERO) ? "_apple.txt" : "_nero.txt");
+            if ((sts = chapParser.read_file(chap_name, inputCP, 0.0)) != AUO_CHAP_ERR_NONE) {
+                _ftprintf(stderr, _T("Failed to parse %s\n"), chap_name);
+            } else {
+                const auto chap_path = std::filesystem::path(chap_name);
+                auto new_chap = chap_path.parent_path();
+                new_chap /= chap_path.stem();
+                new_chap += _T("_");
+                new_chap += typeToStr(chapParser.get_out_chapter_type(convertTo));
+                new_chap += chap_path.extension();
                 chapParser.add_dummy_chap_zero_pos();
-                chapParser.write_file(new_chap_name, CHAP_TYPE_ANOTHER, false);
+                chapParser.write_file(new_chap.c_str(), convertTo, convertToNeroUTF8);
+                _ftprintf(stderr, _T("Convert %s (%s) -> %s (%s)\n"),
+                    chap_name, typeToStr(chapParser.file_chapter_type()),
+                    new_chap.filename().c_str(), typeToStr(chapParser.get_out_chapter_type(convertTo)));
             }
-            fprintf(stderr, "%s: %s\n", (sts == AUO_CHAP_ERR_NONE) ? "成功" : "失敗", PathFindFileName(argv[i]));
         }
     }
     return 0;
