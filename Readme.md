@@ -1,6 +1,6 @@
 
 # ChapConvert
-
+[“ú–{Œê”Å‚Í‚±‚¿‚ç„„](./Readme.ja.md)  
 Converts chapter file formats.
 
 ## System Requirements
