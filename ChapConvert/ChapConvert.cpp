@@ -1,12 +1,32 @@
-//  -----------------------------------------------------------------------------------------
-//    拡張 x264 出力(GUI) Ex  v1.xx/2.xx by rigaya
-//  -----------------------------------------------------------------------------------------
-//   ソースコードについて
-//   ・無保証です。
-//   ・本ソースコードを使用したことによるいかなる損害・トラブルについてrigayaは責任を負いません。
-//   以上に了解して頂ける場合、本ソースコードの使用、複製、改変、再頒布を行って頂いて構いません。
-//  -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------
+// ChapConvert by rigaya
+// -----------------------------------------------------------------------------------------
+// The MIT License
+//
+// Copyright (c) 2022 rigaya
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+// ------------------------------------------------------------------------------------------
+
 #include <filesystem>
+#include "ChapConvert_version.h"
 #include "rgy_chapter.h"
 #include "rgy_filesystem.h"
 #include "rgy_codepage.h"
@@ -34,32 +54,33 @@ ChapType typeFromStr(const TCHAR *str, bool& convertToNeroUTF8) {
 
 void print_help() {
     _ftprintf(stdout,
-        _T("ChapConvert\n")
+        _T("ChapConvert ") VER_TSTR_FILEVERSION _T("\n")
         _T("\n")
-        _T("usage\n")
-        _T("ChapConvert(.exe) [options] <chapter file1> [<chapter file2>][...]\n")
+        _T("Usage\n")
+        _T("ChapConvert.exe [options] <chapter file1> [<chapter file2>][...]\n")
         _T("\n")
-        _T("options\n")
-        _T("-f,--format <string>   output capter format (default: another)\n")
-        _T("   another   ... convert to another format (nero->apple, apple->nero)\n")
-        _T("   nero      ... convert to nero format\n")
-        _T("   nero_utf8 ... convert to nero format in utf8\n")
-        _T("   apple     ... convert to apple format\n")
+        _T("Options\n")
+        _T("-f,--format <string>    output chapter format (default: another)\n")
+        _T("    another   ... convert to another format (nero->apple, apple->nero)\n")
+        _T("    nero      ... convert to nero format (ansi)\n")
+        _T("    nero_utf8 ... convert to nero format (utf8)\n")
+        _T("    apple     ... convert to apple format (utf8)\n")
         _T("\n")
-        _T("  --format-in <string> input chapter format (default: auto detect)\n")
-        _T("   nero      ... nero format\n")
-        _T("   nero_utf8 ... nero format in utf8\n")
-        _T("   apple     ... apple format\n")
-        _T("   matroska  ... matroska format\n")
+        _T("   --format-in <string>  input chapter format (default: auto)\n")
+        _T("    nero      ... nero format (ansi)\n")
+        _T("    nero_utf8 ... nero format (utf8)\n")
+        _T("    apple     ... apple format (utf8)\n")
+        _T("    matroska  ... matroska format (utf8)\n")
         _T("\n")
-        _T("  --cp-in  <string>    input codepage (default: ansi)\n")
-        _T("   ansi, utf8, sjis, eucjp, iso2022jp, utf16le, utf16be\n")
+        _T("   --cp-in  <string>     input codepage (default: auto)\n")
+        _T("    ansi, utf8, sjis, eucjp, iso2022jp, utf16le, utf16be\n")
     );
 }
 
 int _tmain(int argc, const TCHAR **argv) {
     if (argc == 1) {
         _ftprintf(stderr, _T("target chapter file not specified.\n"));
+        print_help();
         return 1;
     }
     ChapType convertFrom         = CHAP_TYPE_UNKNOWN;
@@ -70,27 +91,31 @@ int _tmain(int argc, const TCHAR **argv) {
 
     int iarg = 1;
     for (; iarg < argc-1; iarg++) {
-        if (   _tcscmp(argv[iarg], _T("-f")) == 0
+        if (_tcscmp(argv[iarg], _T("-h")) == 0) {
+            print_help();
+            return 0;
+        } else if (
+               _tcscmp(argv[iarg], _T("-f")) == 0
             || _tcscmp(argv[iarg], _T("--format")) == 0) {
             iarg++;
             convertTo = typeFromStr(argv[iarg], convertToNeroUTF8);
             if (convertTo == CHAP_TYPE_UNKNOWN) {
                 _ftprintf(stderr, _T("invalid output format: %s.\n"), argv[iarg]);
-                exit(1);
+                return 1;
             }
         } else if (_tcscmp(argv[iarg], _T("--format-in")) == 0) {
             iarg++;
             convertFrom = typeFromStr(argv[iarg], convertFromNeroUTF8);
             if (convertFrom == CHAP_TYPE_UNKNOWN) {
                 _ftprintf(stderr, _T("invalid input format: %s.\n"), argv[iarg]);
-                exit(1);
+                return 1;
             }
         } else if (_tcscmp(argv[iarg], _T("--cp-in")) == 0) {
             iarg++;
             inputCP = codepage_from_str(tchar_to_string(argv[iarg]).c_str());
             if (inputCP == CODE_PAGE_UNSET) {
                 _ftprintf(stderr, _T("invalid input code page: %s.\n"), argv[iarg]);
-                exit(1);
+                return 1;
             }
         }
     }

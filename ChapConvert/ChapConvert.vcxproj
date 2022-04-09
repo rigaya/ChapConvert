@@ -106,12 +106,19 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ChapConvert_version.h" />
     <ClInclude Include="rgy_chapter.h" />
     <ClInclude Include="rgy_codepage.h" />
     <ClInclude Include="rgy_filesystem.h" />
     <ClInclude Include="rgy_osdep.h" />
     <ClInclude Include="rgy_tchar.h" />
     <ClInclude Include="rgy_util.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ChapConvert.rc">
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">/c 65001 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">/c 65001 %(AdditionalOptions)</AdditionalOptions>
+    </ResourceCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
